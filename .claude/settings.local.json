@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run tauri:dev:*)",
+      "Bash(curl:*)",
+      "Bash(sh:*)",
+      "Bash(source $HOME/.cargo/env)",
+      "Bash(cargo --version)",
+      "Bash(cargo tauri icon:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

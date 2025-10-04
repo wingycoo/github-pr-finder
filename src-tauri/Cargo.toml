@@ -1,0 +1,20 @@
+[package]
+name = "github-pr-finder"
+version = "0.1.0"
+description = "GitHub Pull Request를 생성일자 월별로 조회할 수 있는 Desktop Application"
+authors = ["you"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-sql = { version = "2.0", features = ["sqlite"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
