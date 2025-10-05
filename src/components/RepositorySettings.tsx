@@ -48,10 +48,6 @@ const RepositorySettings = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("이 저장소를 삭제하시겠습니까?")) {
-      return;
-    }
-
     try {
       await deleteRepository(id);
       await loadRepositories();

@@ -106,10 +106,6 @@ const MemberSettings = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("이 멤버를 삭제하시겠습니까?")) {
-      return;
-    }
-
     try {
       await deleteMember(id);
       await loadMembers();

@@ -42,7 +42,7 @@
 
 .pr-count {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   font-weight: 500;
   color: #6b7280;
   margin-left: auto;
@@ -148,7 +148,7 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e5e7eb;
-  background: #ffffff;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -184,7 +184,7 @@
 
 .pr-body-meta {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -201,6 +201,7 @@
 
 .pr-body-markdown {
   padding: 0;
+  background: transparent;
 }
 
 /* GitHub markdown 스타일 오버라이드 */
@@ -211,6 +212,7 @@
   padding: 0;
   font-size: 14px;
   line-height: 1.6;
+  text-align: left;
 }
 
 .pr-body-markdown.markdown-body img {
@@ -256,7 +258,7 @@
 }
 
 .pr-body-markdown.markdown-body table tr {
-  background-color: #ffffff;
+  background-color: transparent;
   border-top: 1px solid #d0d7de;
 }
 

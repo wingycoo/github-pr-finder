@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Database from "@tauri-apps/plugin-sql";
+import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "github-markdown-css/github-markdown-light.css";
 import "./PRView.css";
+import { getSetting } from "../utils/database";
+import { DATA_KEY } from "../constants";
 
 interface Member {
   id: number;
@@ -36,25 +39,31 @@ interface Repository {
 const PRView = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedMember, setSelectedMember] = useState<string>("");
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedQuarter, setSelectedQuarter] = useState<string>("");
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null);
   const [repositories, setRepositories] = useState<Map<number, Repository>>(new Map());
+  const [githubToken, setGithubToken] = useState<string>("");
+  const [imageCache, setImageCache] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     loadMembers();
     loadRepositories();
-    // 기본값으로 현재 월 설정
+    loadGithubToken();
+    // 기본값으로 현재 연도와 분기 설정
     const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    setSelectedMonth(currentMonth);
+    const currentYear = now.getFullYear().toString();
+    const currentQuarter = Math.ceil((now.getMonth() + 1) / 3).toString();
+    setSelectedYear(currentYear);
+    setSelectedQuarter(currentQuarter);
   }, []);
 
   useEffect(() => {
-    if (selectedMember && selectedMonth) {
+    if (selectedMember && selectedYear && selectedQuarter) {
       loadPullRequests();
     }
-  }, [selectedMember, selectedMonth]);
+  }, [selectedMember, selectedYear, selectedQuarter]);
 
   const loadMembers = async () => {
     try {
@@ -78,15 +87,30 @@ const PRView = () => {
     }
   };
 
+  const loadGithubToken = async () => {
+    try {
+      const token = await getSetting(DATA_KEY.GITHUB_ACCESS_TOKEN);
+      if (token) {
+        setGithubToken(token);
+      }
+    } catch (error) {
+      console.error("토큰 로딩 실패:", error);
+    }
+  };
+
   const loadPullRequests = async () => {
     try {
       const db = await Database.load("sqlite:github_pr_finder.db");
 
-      // 선택한 월의 시작일과 종료일 계산
-      const [year, month] = selectedMonth.split("-");
-      const startDate = `${year}-${month}-01`;
-      const endDate = new Date(parseInt(year), parseInt(month), 0).getDate();
-      const endDateStr = `${year}-${month}-${endDate}`;
+      // 선택한 분기의 시작일과 종료일 계산
+      const year = selectedYear;
+      const quarter = parseInt(selectedQuarter);
+      const startMonth = (quarter - 1) * 3 + 1;
+      const endMonth = quarter * 3;
+
+      const startDate = `${year}-${String(startMonth).padStart(2, "0")}-01`;
+      const endDate = new Date(parseInt(year), endMonth, 0).getDate();
+      const endDateStr = `${year}-${String(endMonth).padStart(2, "0")}-${endDate}`;
 
       const result = await db.select<PullRequest[]>(
         `SELECT * FROM pull_requests
@@ -125,6 +149,26 @@ const PRView = () => {
     }
   };
 
+  const fetchImageAsBase64 = async (url: string): Promise<string> => {
+    console.log("fetchImageAsBase64", url, githubToken);
+    if (imageCache.has(url)) {
+      return imageCache.get(url)!;
+    }
+
+    console.log("fetchImageAsBase64", url, githubToken);
+
+    try {
+      const bytes: number[] = await invoke("fetch_github_image", { url, token: githubToken });
+      const base64 = btoa(String.fromCharCode(...bytes));
+      const dataUrl = `data:image/png;base64,${base64}`;
+      setImageCache(new Map(imageCache.set(url, dataUrl)));
+      return dataUrl;
+    } catch (error) {
+      console.error("이미지 로딩 실패:", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="pr-view-container">
       <div className="pr-view-header">
@@ -146,13 +190,34 @@ const PRView = () => {
           </div>
 
           <div className="filter-group">
-            <label htmlFor="month-select">조회 월</label>
-            <input
-              id="month-select"
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-            />
+            <label htmlFor="year-select">연도</label>
+            <select
+              id="year-select"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              <option value="">연도를 선택하세요</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="quarter-select">분기</label>
+            <select
+              id="quarter-select"
+              value={selectedQuarter}
+              onChange={(e) => setSelectedQuarter(e.target.value)}
+            >
+              <option value="">분기를 선택하세요</option>
+              <option value="1">1분기 (1-3월)</option>
+              <option value="2">2분기 (4-6월)</option>
+              <option value="3">3분기 (7-9월)</option>
+              <option value="4">4분기 (10-12월)</option>
+            </select>
           </div>
 
           <div className="pr-count">
@@ -168,9 +233,9 @@ const PRView = () => {
           <div className="pr-list">
             {pullRequests.length === 0 ? (
               <div className="empty-state">
-                {selectedMember && selectedMonth
+                {selectedMember && selectedYear && selectedQuarter
                   ? "조회된 PR이 없습니다."
-                  : "멤버와 월을 선택해주세요."}
+                  : "멤버, 연도, 분기를 선택해주세요."}
               </div>
             ) : (
               pullRequests.map((pr) => (
@@ -227,13 +292,51 @@ const PRView = () => {
                       remarkPlugins={[remarkGfm]}
                       rehypePlugins={[rehypeRaw]}
                       components={{
-                        img: ({ node, ...props }) => (
-                          <img
-                            {...props}
-                            style={{ maxWidth: "100%", height: "auto" }}
-                            loading="lazy"
-                          />
-                        ),
+                        img: ({ node, ...props }) => {
+                          const [imgSrc, setImgSrc] = useState<string>(props.src || "");
+                          const [isLoading, setIsLoading] = useState<boolean>(true);
+                          const [hasError, setHasError] = useState<boolean>(false);
+
+                          useEffect(() => {
+                            console.log("useEffect", props.src);
+                            if (props.src && props.src.includes("github.com")) {
+                              setIsLoading(true);
+                              fetchImageAsBase64(props.src)
+                                .then(base64Url => {
+                                  setImgSrc(base64Url);
+                                  setIsLoading(false);
+                                })
+                                .catch(() => {
+                                  setHasError(true);
+                                  setIsLoading(false);
+                                });
+                            } else {
+                              setIsLoading(false);
+                            }
+                          }, [props.src]);
+
+                          if (hasError) {
+                            return (
+                              <a
+                                href={props.src}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: "#0969da", textDecoration: "underline" }}
+                              >
+                                🖼️ 이미지 보기: {props.alt || "GitHub 이미지"}
+                              </a>
+                            );
+                          }
+
+                          return (
+                            <img
+                              {...props}
+                              src={imgSrc}
+                              style={{ maxWidth: "100%", height: "auto", opacity: isLoading ? 0.5 : 1 }}
+                              loading="lazy"
+                            />
+                          );
+                        },
                       }}
                     >
                       {selectedPR.body}

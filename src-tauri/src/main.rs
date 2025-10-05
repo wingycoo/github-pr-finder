@@ -28,6 +28,31 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
+async fn fetch_github_image(url: String, token: String) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("User-Agent", "github-pr-finder")
+        .send()
+        .await
+        .map_err(|e| format!("이미지 가져오기 실패: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("이미지 응답 오류: {}", response.status()));
+    }
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("이미지 데이터 읽기 실패: {}", e))?
+        .to_vec();
+
+    Ok(bytes)
+}
+
+#[tauri::command]
 async fn sync_pull_requests(
     owner: String,
     repo: String,
@@ -41,6 +66,7 @@ async fn sync_pull_requests(
         "https://api.github.com/repos/{}/{}/pulls?state=all&per_page=100",
         owner, repo
     );
+    println!("url: {}", url);
 
     let response = client
         .get(&url)
@@ -143,7 +169,7 @@ fn main() {
                 .add_migrations("sqlite:github_pr_finder.db", migrations)
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![greet, sync_pull_requests])
+        .invoke_handler(tauri::generate_handler![greet, sync_pull_requests, fetch_github_image])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
