@@ -150,12 +150,9 @@ const PRView = () => {
   };
 
   const fetchImageAsBase64 = async (url: string): Promise<string> => {
-    console.log("fetchImageAsBase64", url, githubToken);
     if (imageCache.has(url)) {
       return imageCache.get(url)!;
     }
-
-    console.log("fetchImageAsBase64", url, githubToken);
 
     try {
       const bytes: number[] = await invoke("fetch_github_image", { url, token: githubToken });
@@ -298,7 +295,6 @@ const PRView = () => {
                           const [hasError, setHasError] = useState<boolean>(false);
 
                           useEffect(() => {
-                            console.log("useEffect", props.src);
                             if (props.src && props.src.includes("github.com")) {
                               setIsLoading(true);
                               fetchImageAsBase64(props.src)
