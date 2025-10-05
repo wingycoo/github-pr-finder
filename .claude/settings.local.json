@@ -9,7 +9,9 @@
       "Bash(cargo --version)",
       "Bash(cargo tauri icon:*)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash($HOME/.cargo/bin/cargo --version)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")"
     ],
     "deny": [],
     "ask": []
