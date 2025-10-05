@@ -11,7 +11,13 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash($HOME/.cargo/bin/cargo --version)",
-      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")"
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")",
+      "Bash(cargo:*)",
+      "Bash(npx @tauri-apps/cli icon:*)",
+      "Bash(brew install:*)",
+      "Bash(magick convert:*)",
+      "Bash(magick:*)",
+      "Bash(identify -verbose src-tauri/icons/icon.png)"
     ],
     "deny": [],
     "ask": []

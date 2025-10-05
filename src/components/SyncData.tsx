@@ -96,19 +96,58 @@ const SyncData = () => {
       const repositoryId = repoResult[0].id;
       let savedCount = 0;
 
-      // PR 데이터 저장
+      // 작성자 목록 수집
+      const authors = new Set<string>();
+      result.prs.forEach(pr => authors.add(pr.author));
+
+      // 자동으로 멤버 추가
+      for (const author of authors) {
+        const escapedAuthor = author.replace(/'/g, "''");
+        await db.execute(
+          `INSERT OR IGNORE INTO members (username, display_name)
+           VALUES ('${escapedAuthor}', '${escapedAuthor}')`
+        );
+      }
+
+      // PR 데이터 저장 (diff 포함)
       for (const pr of result.prs) {
         const body = (pr.body || "").replace(/'/g, "''");
         const title = pr.title.replace(/'/g, "''");
         const author = pr.author.replace(/'/g, "''");
         const mergedAt = pr.merged_at ? `'${pr.merged_at}'` : "NULL";
 
+        // 변경사항 크기 확인 (additions + deletions > 2000 이면 diff 스킵)
+        const totalChanges = (pr.additions || 0) + (pr.deletions || 0);
+        const shouldFetchDiff = totalChanges <= 2000;
+
+        // Diff 가져오기 (조건부)
+        let diffContent = "";
+        if (shouldFetchDiff) {
+          try {
+            diffContent = await invoke<string>("fetch_pr_diff", {
+              owner,
+              repo,
+              prNumber: pr.number,
+              token,
+            });
+          } catch (error) {
+            console.error(`PR #${pr.number} Diff 가져오기 실패:`, error);
+          }
+        } else {
+          console.log(
+            `PR #${pr.number}: 변경사항이 ${totalChanges}라인으로 2000라인을 초과하여 diff 저장 스킵`
+          );
+        }
+
+        const escapedDiff = diffContent.replace(/'/g, "''");
+
         await db.execute(
           `INSERT OR REPLACE INTO pull_requests
-          (pr_number, title, body, author, repository_id, state, created_at, updated_at, merged_at, html_url, diff_url)
-          VALUES (${pr.number}, '${title}', '${body}', '${author}', ${repositoryId}, '${pr.state}', '${pr.created_at}', '${pr.updated_at}', ${mergedAt}, '${pr.html_url}', '${pr.diff_url}')`
+          (pr_number, title, body, author, repository_id, state, created_at, updated_at, merged_at, html_url, diff_url, diff_content)
+          VALUES (${pr.number}, '${title}', '${body}', '${author}', ${repositoryId}, '${pr.state}', '${pr.created_at}', '${pr.updated_at}', ${mergedAt}, '${pr.html_url}', '${pr.diff_url}', '${escapedDiff}')`
         );
         savedCount++;
+        setMessage(`동기화 중... ${savedCount}/${result.prs.length}`);
       }
 
       setMessage(`동기화 완료: ${savedCount}개의 PR이 저장되었습니다.`);

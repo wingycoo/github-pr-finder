@@ -4,10 +4,12 @@ import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import "github-markdown-css/github-markdown-light.css";
-import "./PRView.css";
 import { getSetting } from "../utils/database";
 import { DATA_KEY } from "../constants";
+import { parseDiff, Diff, Hunk } from "react-diff-view";
+import "react-diff-view/style/index.css";
+import "github-markdown-css/github-markdown-light.css";
+import "./PRView.css";
 
 interface Member {
   id: number;
@@ -28,6 +30,7 @@ interface PullRequest {
   merged_at: string | null;
   html_url: string;
   diff_url: string;
+  diff_content: string | null;
 }
 
 interface Repository {
@@ -46,6 +49,9 @@ const PRView = () => {
   const [repositories, setRepositories] = useState<Map<number, Repository>>(new Map());
   const [githubToken, setGithubToken] = useState<string>("");
   const [imageCache, setImageCache] = useState<Map<string, string>>(new Map());
+  const [diffText, setDiffText] = useState<string>("");
+  const [showBody, setShowBody] = useState<boolean>(true);
+  const [showDiff, setShowDiff] = useState<boolean>(true);
 
   useEffect(() => {
     loadMembers();
@@ -58,6 +64,53 @@ const PRView = () => {
     setSelectedYear(currentYear);
     setSelectedQuarter(currentQuarter);
   }, []);
+
+  // 키보드 단축키
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // input, textarea에서는 단축키 비활성화
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (e.key === 'c' || e.key === 'C') {
+        setShowBody(prev => !prev);
+      } else if (e.key === 'd' || e.key === 'D') {
+        setShowDiff(prev => !prev);
+      } else if (e.key === 'n' || e.key === 'N') {
+        // 다음 PR로 이동
+        if (pullRequests.length === 0) return;
+
+        const currentIndex = selectedPR
+          ? pullRequests.findIndex(pr => pr.id === selectedPR.id)
+          : -1;
+
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < pullRequests.length) {
+          setSelectedPR(pullRequests[nextIndex]);
+        }
+      } else if (e.key === 'p' || e.key === 'P') {
+        // 이전 PR로 이동
+        if (pullRequests.length === 0) return;
+
+        const currentIndex = selectedPR
+          ? pullRequests.findIndex(pr => pr.id === selectedPR.id)
+          : -1;
+
+        const prevIndex = currentIndex - 1;
+        if (prevIndex >= 0) {
+          setSelectedPR(pullRequests[prevIndex]);
+        } else if (currentIndex === -1 && pullRequests.length > 0) {
+          // 선택된 PR이 없으면 첫 번째 PR 선택
+          setSelectedPR(pullRequests[0]);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pullRequests, selectedPR]);
 
   useEffect(() => {
     if (selectedMember && selectedYear && selectedQuarter) {
@@ -166,12 +219,38 @@ const PRView = () => {
     }
   };
 
+  useEffect(() => {
+    if (selectedPR) {
+      setDiffText(selectedPR.diff_content || "");
+
+      // 선택된 PR을 화면에 보이도록 스크롤
+      const selectedElement = document.querySelector('.pr-item.selected');
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      }
+    } else {
+      setDiffText("");
+    }
+  }, [selectedPR]);
+
+  const parsedDiff = useMemo(() => {
+    if (!diffText) return [];
+    try {
+      return parseDiff(diffText);
+    } catch (error) {
+      console.error("Diff 파싱 실패:", error);
+      return [];
+    }
+  }, [diffText]);
+
   return (
     <div className="pr-view-container">
       <div className="pr-view-header">
         <div className="filter-section">
           <div className="filter-group">
-            <label htmlFor="member-select">멤버</label>
             <select
               id="member-select"
               value={selectedMember}
@@ -187,7 +266,6 @@ const PRView = () => {
           </div>
 
           <div className="filter-group">
-            <label htmlFor="year-select">연도</label>
             <select
               id="year-select"
               value={selectedYear}
@@ -203,7 +281,6 @@ const PRView = () => {
           </div>
 
           <div className="filter-group">
-            <label htmlFor="quarter-select">분기</label>
             <select
               id="quarter-select"
               value={selectedQuarter}
@@ -265,9 +342,19 @@ const PRView = () => {
         </div>
 
         {/* PR 본문 */}
-        <div className="pr-body-panel">
-          <h3>본문</h3>
-          <div className="pr-body-content">
+        {showBody && (
+          <div className="pr-body-panel">
+            <div className="panel-header">
+              <h3>본문</h3>
+              <button
+                className="toggle-button"
+                onClick={() => setShowBody(false)}
+                title="본문 숨기기 (C)"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="pr-body-content">
             {selectedPR ? (
               <>
                 <div className="pr-body-header">
@@ -345,24 +432,91 @@ const PRView = () => {
             ) : (
               <div className="empty-state">PR을 선택해주세요.</div>
             )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Code Diff */}
-        <div className="pr-diff-panel">
-          <h3>Code Diff</h3>
-          <div className="pr-diff-content">
+        {showDiff && (
+          <div className="pr-diff-panel">
+            <div className="panel-header">
+              <h3>Code Diff</h3>
+              <button
+                className="toggle-button"
+                onClick={() => setShowDiff(false)}
+                title="Code Diff 숨기기 (D)"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="pr-diff-content">
             {selectedPR ? (
-              <iframe
-                src={selectedPR.html_url + "/files"}
-                title="PR Diff"
-                className="pr-diff-iframe"
-              />
+              parsedDiff.length > 0 ? (
+                <div className="diff-viewer">
+                  {parsedDiff.map((file, index) => (
+                    <div key={index} className="diff-file">
+                      <div className="diff-file-header">
+                        {file.oldPath === file.newPath
+                          ? file.oldPath
+                          : `${file.oldPath} → ${file.newPath}`}
+                      </div>
+                      <Diff
+                        key={file.oldRevision + "-" + file.newRevision}
+                        viewType="split"
+                        diffType={file.type}
+                        hunks={file.hunks || []}
+                      >
+                        {(hunks) =>
+                          hunks.map((hunk) => (
+                            <Hunk key={hunk.content} hunk={hunk} />
+                          ))
+                        }
+                      </Diff>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  Diff를 불러올 수 없습니다.
+                  <br />
+                  <a
+                    href={selectedPR.html_url + "/files"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#0969da", textDecoration: "underline" }}
+                  >
+                    GitHub에서 보기 →
+                  </a>
+                </div>
+              )
             ) : (
               <div className="empty-state">PR을 선택해주세요.</div>
             )}
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* 숨김 토글 버튼 */}
+      <div className="hidden-panel-toggles">
+        {!showBody && (
+          <button
+            className="show-panel-button"
+            onClick={() => setShowBody(true)}
+            title="본문 보이기 (C)"
+          >
+            본문 (C)
+          </button>
+        )}
+        {!showDiff && (
+          <button
+            className="show-panel-button"
+            onClick={() => setShowDiff(true)}
+            title="Code Diff 보이기 (D)"
+          >
+            Code Diff (D)
+          </button>
+        )}
       </div>
     </div>
   );

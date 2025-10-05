@@ -1,14 +1,13 @@
 import { useState } from "react";
 import RepositorySettings from "./RepositorySettings";
 import TokenSettings from "./TokenSettings";
-import MemberSettings from "./MemberSettings";
 import "./Settings.css";
 
 interface SettingsProps {
   onClose: () => void;
 }
 
-type TabType = "repositories" | "token" | "members";
+type TabType = "repositories" | "token";
 
 const Settings = ({ onClose }: SettingsProps) => {
   const [activeTab, setActiveTab] = useState<TabType>("repositories");
@@ -19,8 +18,6 @@ const Settings = ({ onClose }: SettingsProps) => {
         return <RepositorySettings />;
       case "token":
         return <TokenSettings />;
-      case "members":
-        return <MemberSettings />;
       default:
         return <RepositorySettings />;
     }
@@ -50,12 +47,6 @@ const Settings = ({ onClose }: SettingsProps) => {
                 onClick={() => setActiveTab("token")}
               >
                 GitHub Access Token
-              </button>
-              <button
-                className={`nav-item ${activeTab === "members" ? "active" : ""}`}
-                onClick={() => setActiveTab("members")}
-              >
-                Member 관리
               </button>
             </nav>
           </div>

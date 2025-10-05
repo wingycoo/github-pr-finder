@@ -15,6 +15,9 @@ struct PullRequest {
     updated_at: String,
     merged_at: Option<String>,
     html_url: String,
+    changed_files: Option<u64>,
+    additions: Option<u64>,
+    deletions: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,6 +53,35 @@ async fn fetch_github_image(url: String, token: String) -> Result<Vec<u8>, Strin
         .to_vec();
 
     Ok(bytes)
+}
+
+#[tauri::command]
+async fn fetch_pr_diff(owner: String, repo: String, pr_number: u64, token: String) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "https://api.github.com/repos/{}/{}/pulls/{}",
+        owner, repo, pr_number
+    );
+
+    let response = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("User-Agent", "github-pr-finder")
+        .header("Accept", "application/vnd.github.v3.diff")
+        .send()
+        .await
+        .map_err(|e| format!("Diff 가져오기 실패: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Diff 응답 오류: {}", response.status()));
+    }
+
+    let diff = response
+        .text()
+        .await
+        .map_err(|e| format!("Diff 데이터 읽기 실패: {}", e))?;
+
+    Ok(diff)
 }
 
 #[tauri::command]
@@ -100,7 +132,10 @@ async fn sync_pull_requests(
                 "updated_at": pr.updated_at,
                 "merged_at": pr.merged_at,
                 "html_url": pr.html_url,
-                "diff_url": format!("{}.diff", pr.html_url)
+                "diff_url": format!("{}.diff", pr.html_url),
+                "changed_files": pr.changed_files,
+                "additions": pr.additions,
+                "deletions": pr.deletions
             })
         })
         .collect();
@@ -160,6 +195,12 @@ fn main() {
                 );
             ",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_diff_content_to_pull_requests",
+            sql: "ALTER TABLE pull_requests ADD COLUMN diff_content TEXT;",
+            kind: MigrationKind::Up,
         }
     ];
 
@@ -169,7 +210,7 @@ fn main() {
                 .add_migrations("sqlite:github_pr_finder.db", migrations)
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![greet, sync_pull_requests, fetch_github_image])
+        .invoke_handler(tauri::generate_handler![greet, sync_pull_requests, fetch_github_image, fetch_pr_diff])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

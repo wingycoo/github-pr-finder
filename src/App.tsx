@@ -44,9 +44,6 @@ function App() {
   return (
     <div className="container">
       <header className="app-header">
-        <h1 onClick={() => setCurrentPage("home")} style={{ cursor: "pointer" }}>
-          GitHub PR Finder
-        </h1>
         <nav className="app-nav">
           <button
             className={`nav-button ${currentPage === "sync" ? "active" : ""}`}
