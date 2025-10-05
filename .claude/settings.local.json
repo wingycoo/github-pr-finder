@@ -17,7 +17,11 @@
       "Bash(brew install:*)",
       "Bash(magick convert:*)",
       "Bash(magick:*)",
-      "Bash(identify -verbose src-tauri/icons/icon.png)"
+      "Bash(identify -verbose src-tauri/icons/icon.png)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

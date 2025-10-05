@@ -4,12 +4,11 @@ import { invoke } from "@tauri-apps/api/core";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { getSetting } from "../utils/database";
-import { DATA_KEY } from "../constants";
 import { parseDiff, Diff, Hunk } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import "github-markdown-css/github-markdown-light.css";
-import "./PRView.css";
+import { DATA_KEY } from "../constants";
+import { getSetting } from "../utils/database";
 
 interface Member {
   id: number;
@@ -224,7 +223,7 @@ const PRView = () => {
       setDiffText(selectedPR.diff_content || "");
 
       // 선택된 PR을 화면에 보이도록 스크롤
-      const selectedElement = document.querySelector('.pr-item.selected');
+      const selectedElement = document.querySelector(`[data-pr-id="${selectedPR.id}"]`);
       if (selectedElement) {
         selectedElement.scrollIntoView({
           behavior: 'smooth',
@@ -247,12 +246,13 @@ const PRView = () => {
   }, [diffText]);
 
   return (
-    <div className="pr-view-container">
-      <div className="pr-view-header">
-        <div className="filter-section">
-          <div className="filter-group">
+    <div className="flex flex-col h-screen bg-base-100">
+      <div className="bg-base-200 p-4 shadow-md">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="form-control w-full max-w-xs">
             <select
               id="member-select"
+              className="select select-bordered w-full"
               value={selectedMember}
               onChange={(e) => setSelectedMember(e.target.value)}
             >
@@ -265,9 +265,10 @@ const PRView = () => {
             </select>
           </div>
 
-          <div className="filter-group">
+          <div className="form-control w-full max-w-xs">
             <select
               id="year-select"
+              className="select select-bordered w-full"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
             >
@@ -280,9 +281,10 @@ const PRView = () => {
             </select>
           </div>
 
-          <div className="filter-group">
+          <div className="form-control w-full max-w-xs">
             <select
               id="quarter-select"
+              className="select select-bordered w-full"
               value={selectedQuarter}
               onChange={(e) => setSelectedQuarter(e.target.value)}
             >
@@ -294,19 +296,19 @@ const PRView = () => {
             </select>
           </div>
 
-          <div className="pr-count">
+          <div className="badge badge-lg badge-primary">
             총 {pullRequests.length}개의 PR
           </div>
         </div>
       </div>
 
-      <div className="pr-view-content">
+      <div className={`flex-1 grid ${showBody && showDiff ? 'grid-cols-3' : showBody || showDiff ? 'grid-cols-2' : 'grid-cols-1'} gap-2 p-2 overflow-hidden`}>
         {/* PR 목록 */}
-        <div className="pr-list-panel">
-          <h3>Pull Requests</h3>
-          <div className="pr-list">
+        <div className="flex flex-col bg-base-200 rounded-lg shadow-md overflow-hidden">
+          <h3 className="text-lg font-bold p-3 bg-base-300">Pull Requests</h3>
+          <div className="flex-1 overflow-y-auto p-2 space-y-2">
             {pullRequests.length === 0 ? (
-              <div className="empty-state">
+              <div className="flex items-center justify-center h-full text-base-content/60 text-center p-4">
                 {selectedMember && selectedYear && selectedQuarter
                   ? "조회된 PR이 없습니다."
                   : "멤버, 연도, 분기를 선택해주세요."}
@@ -315,25 +317,30 @@ const PRView = () => {
               pullRequests.map((pr) => (
                 <div
                   key={pr.id}
-                  className={`pr-item ${selectedPR?.id === pr.id ? "selected" : ""}`}
+                  data-pr-id={pr.id}
+                  className={`card bg-base-100 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+                    selectedPR?.id === pr.id ? "ring-2 ring-primary bg-primary/10" : ""
+                  }`}
                   onClick={() => setSelectedPR(pr)}
                 >
-                  <div className="pr-item-header">
-                    <span
-                      className="pr-state"
-                      style={{ backgroundColor: getStateColor(pr.state) }}
-                    >
-                      {pr.state}
-                    </span>
-                    <span className="pr-number">#{pr.pr_number}</span>
-                  </div>
-                  <div className="pr-item-title">{pr.title}</div>
-                  <div className="pr-item-meta">
-                    <span className="pr-repo">
-                      {repositories.get(pr.repository_id)?.owner}/
-                      {repositories.get(pr.repository_id)?.name}
-                    </span>
-                    <span className="pr-date">{formatDate(pr.created_at)}</span>
+                  <div className="card-body p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="badge badge-sm text-white"
+                        style={{ backgroundColor: getStateColor(pr.state) }}
+                      >
+                        {pr.state}
+                      </span>
+                      <span className="text-sm font-mono text-base-content/70">#{pr.pr_number}</span>
+                    </div>
+                    <div className="font-medium text-sm line-clamp-2">{pr.title}</div>
+                    <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-base-content/60">
+                      <span className="truncate max-w-[200px]">
+                        {repositories.get(pr.repository_id)?.owner}/
+                        {repositories.get(pr.repository_id)?.name}
+                      </span>
+                      <span>{formatDate(pr.created_at)}</span>
+                    </div>
                   </div>
                 </div>
               ))
@@ -343,34 +350,34 @@ const PRView = () => {
 
         {/* PR 본문 */}
         {showBody && (
-          <div className="pr-body-panel">
-            <div className="panel-header">
-              <h3>본문</h3>
+          <div className="flex flex-col bg-base-200 rounded-lg shadow-md overflow-hidden">
+            <div className="flex items-center justify-between p-3 bg-base-300">
+              <h3 className="text-lg font-bold">본문</h3>
               <button
-                className="toggle-button"
+                className="btn btn-ghost btn-sm btn-circle"
                 onClick={() => setShowBody(false)}
                 title="본문 숨기기 (C)"
               >
                 ✕
               </button>
             </div>
-            <div className="pr-body-content">
+            <div className="flex-1 overflow-y-auto p-4">
             {selectedPR ? (
               <>
-                <div className="pr-body-header">
-                  <h2>{selectedPR.title}</h2>
-                  <div className="pr-body-meta">
+                <div className="mb-4">
+                  <h2 className="text-xl font-bold mb-2">{selectedPR.title}</h2>
+                  <div className="flex items-center">
                     <a
                       href={selectedPR.html_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="pr-link"
+                      className="link link-primary text-sm"
                     >
                       GitHub에서 보기 →
                     </a>
                   </div>
                 </div>
-                <div className="pr-body-markdown markdown-body">
+                <div className="prose max-w-none markdown-body">
                   {selectedPR.body ? (
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -404,7 +411,7 @@ const PRView = () => {
                                 href={props.src}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ color: "#0969da", textDecoration: "underline" }}
+                                className="link link-primary"
                               >
                                 🖼️ 이미지 보기: {props.alt || "GitHub 이미지"}
                               </a>
@@ -425,12 +432,12 @@ const PRView = () => {
                       {selectedPR.body}
                     </ReactMarkdown>
                   ) : (
-                    <p className="no-description">설명이 없습니다.</p>
+                    <p className="text-base-content/60">설명이 없습니다.</p>
                   )}
                 </div>
               </>
             ) : (
-              <div className="empty-state">PR을 선택해주세요.</div>
+              <div className="flex items-center justify-center h-full text-base-content/60">PR을 선택해주세요.</div>
             )}
             </div>
           </div>
@@ -438,24 +445,24 @@ const PRView = () => {
 
         {/* Code Diff */}
         {showDiff && (
-          <div className="pr-diff-panel">
-            <div className="panel-header">
-              <h3>Code Diff</h3>
+          <div className="flex flex-col bg-base-200 rounded-lg shadow-md overflow-hidden">
+            <div className="flex items-center justify-between p-3 bg-base-300">
+              <h3 className="text-lg font-bold">Code Diff</h3>
               <button
-                className="toggle-button"
+                className="btn btn-ghost btn-sm btn-circle"
                 onClick={() => setShowDiff(false)}
                 title="Code Diff 숨기기 (D)"
               >
                 ✕
               </button>
             </div>
-            <div className="pr-diff-content">
+            <div className="flex-1 overflow-y-auto p-4">
             {selectedPR ? (
               parsedDiff.length > 0 ? (
-                <div className="diff-viewer">
+                <div className="space-y-4">
                   {parsedDiff.map((file, index) => (
-                    <div key={index} className="diff-file">
-                      <div className="diff-file-header">
+                    <div key={index} className="border border-base-300 rounded-lg overflow-hidden">
+                      <div className="bg-base-300 px-3 py-2 font-mono text-sm font-semibold">
                         {file.oldPath === file.newPath
                           ? file.oldPath
                           : `${file.oldPath} → ${file.newPath}`}
@@ -476,21 +483,20 @@ const PRView = () => {
                   ))}
                 </div>
               ) : (
-                <div className="empty-state">
-                  Diff를 불러올 수 없습니다.
-                  <br />
+                <div className="flex flex-col items-center justify-center h-full text-base-content/60 text-center gap-2">
+                  <div>Diff를 불러올 수 없습니다.</div>
                   <a
                     href={selectedPR.html_url + "/files"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "#0969da", textDecoration: "underline" }}
+                    className="link link-primary"
                   >
                     GitHub에서 보기 →
                   </a>
                 </div>
               )
             ) : (
-              <div className="empty-state">PR을 선택해주세요.</div>
+              <div className="flex items-center justify-center h-full text-base-content/60">PR을 선택해주세요.</div>
             )}
             </div>
           </div>
@@ -498,10 +504,10 @@ const PRView = () => {
       </div>
 
       {/* 숨김 토글 버튼 */}
-      <div className="hidden-panel-toggles">
+      <div className="fixed bottom-4 right-4 flex gap-2">
         {!showBody && (
           <button
-            className="show-panel-button"
+            className="btn btn-primary btn-sm shadow-lg"
             onClick={() => setShowBody(true)}
             title="본문 보이기 (C)"
           >
@@ -510,7 +516,7 @@ const PRView = () => {
         )}
         {!showDiff && (
           <button
-            className="show-panel-button"
+            className="btn btn-primary btn-sm shadow-lg"
             onClick={() => setShowDiff(true)}
             title="Code Diff 보이기 (D)"
           >

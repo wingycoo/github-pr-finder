@@ -3,7 +3,6 @@ import Database from "@tauri-apps/plugin-sql";
 import { useEffect, useState } from "react";
 import { DATA_KEY } from "../constants";
 import { getSetting } from "../utils/database";
-import "./SyncData.css";
 
 interface Repository {
   id: number;
@@ -159,70 +158,89 @@ const SyncData = () => {
   };
 
   return (
-    <div className="sync-container">
-      <h2>데이터 동기화</h2>
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h2 className="card-title text-3xl mb-6">데이터 동기화</h2>
 
-      <div className="sync-form">
-        <div className="form-group">
-          <label htmlFor="repository">저장소 선택</label>
-          <select
-            id="repository"
-            value={selectedRepo}
-            onChange={(e) => setSelectedRepo(e.target.value)}
-            disabled={syncing}
-          >
-            <option value="">저장소를 선택하세요</option>
-            {repositories.map((repo) => (
-              <option key={repo.id} value={`${repo.owner}/${repo.name}`}>
-                {repo.owner}/{repo.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="space-y-4">
+            <div className="form-control w-full">
+              <label className="label" htmlFor="repository">
+                <span className="label-text font-semibold">저장소 선택</span>
+              </label>
+              <select
+                id="repository"
+                className="select select-bordered w-full"
+                value={selectedRepo}
+                onChange={(e) => setSelectedRepo(e.target.value)}
+                disabled={syncing}
+              >
+                <option value="">저장소를 선택하세요</option>
+                {repositories.map((repo) => (
+                  <option key={repo.id} value={`${repo.owner}/${repo.name}`}>
+                    {repo.owner}/{repo.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="start-date">시작 날짜</label>
-          <input
-            id="start-date"
-            type="date"
-            value={startDate}
-            onChange={(e) => {
-              console.log("startDate", e.target.value);
-              setStartDate(e.target.value);
-            }}
-            disabled={syncing}
-          />
-        </div>
+            <div className="form-control w-full">
+              <label className="label" htmlFor="start-date">
+                <span className="label-text font-semibold">시작 날짜</span>
+              </label>
+              <input
+                id="start-date"
+                type="date"
+                className="input input-bordered w-full"
+                value={startDate}
+                onChange={(e) => {
+                  console.log("startDate", e.target.value);
+                  setStartDate(e.target.value);
+                }}
+                disabled={syncing}
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="end-date">종료 날짜</label>
-          <input
-            id="end-date"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            disabled={syncing}
-          />
-        </div>
+            <div className="form-control w-full">
+              <label className="label" htmlFor="end-date">
+                <span className="label-text font-semibold">종료 날짜</span>
+              </label>
+              <input
+                id="end-date"
+                type="date"
+                className="input input-bordered w-full"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                disabled={syncing}
+              />
+            </div>
 
-        <button className="sync-button" onClick={handleSync} disabled={syncing}>
-          {syncing ? "동기화 중..." : "동기화 시작"}
-        </button>
+            <button
+              className={`btn btn-primary w-full ${syncing ? "loading" : ""}`}
+              onClick={handleSync}
+              disabled={syncing}
+            >
+              {syncing ? "동기화 중..." : "동기화 시작"}
+            </button>
 
-        {message && (
-          <div className={`message ${syncing ? "info" : "success"}`}>
-            {message}
+            {message && (
+              <div className={`alert ${syncing ? "alert-info" : "alert-success"}`}>
+                <span>{message}</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="sync-info">
-        <h3>안내</h3>
-        <ul>
-          <li>선택한 저장소의 Pull Request를 지정한 기간 동안 동기화합니다.</li>
-          <li>동기화 전에 설정에서 GitHub 토큰과 저장소를 등록해주세요.</li>
-          <li>대량의 PR이 있는 경우 동기화에 시간이 걸릴 수 있습니다.</li>
-        </ul>
+      <div className="card bg-base-100 shadow-xl mt-6">
+        <div className="card-body">
+          <h3 className="card-title">안내</h3>
+          <ul className="list-disc list-inside space-y-2 text-sm">
+            <li>선택한 저장소의 Pull Request를 지정한 기간 동안 동기화합니다.</li>
+            <li>동기화 전에 설정에서 GitHub 토큰과 저장소를 등록해주세요.</li>
+            <li>대량의 PR이 있는 경우 동기화에 시간이 걸릴 수 있습니다.</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

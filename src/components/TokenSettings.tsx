@@ -102,58 +102,53 @@ const TokenSettings = () => {
   };
 
   return (
-    <div>
-      <h3>GitHub Access Token</h3>
-      <p>
-        GitHub API를 사용하여 Pull Request 정보를 가져오기 위해 Personal Access
-        Token이 필요합니다.
-      </p>
-
-      <div
-        style={{
-          marginBottom: "16px",
-          padding: "12px",
-          backgroundColor: "#f0f9ff",
-          border: "1px solid #0ea5e9",
-          borderRadius: "4px",
-        }}
-      >
-        <h4 style={{ margin: "0 0 8px 0", color: "#0c4a6e" }}>
-          토큰 생성 방법:
-        </h4>
-        <ol style={{ margin: 0, paddingLeft: "20px", color: "#075985" }}>
-          <li>
-            GitHub → Settings → Developer settings → Personal access tokens →
-            Tokens (classic)
-          </li>
-          <li>"Generate new token (classic)" 클릭</li>
-          <li>
-            필요한 권한: <code>repo</code>, <code>read:org</code>,{" "}
-            <code>read:user</code>
-          </li>
-          <li>생성된 토큰을 복사하여 아래에 입력</li>
-        </ol>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-bold mb-2">GitHub Access Token</h3>
+        <p className="text-base-content/70">
+          GitHub API를 사용하여 Pull Request 정보를 가져오기 위해 Personal Access
+          Token이 필요합니다.
+        </p>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="token">Personal Access Token</label>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      <div className="alert alert-info">
+        <div>
+          <h4 className="font-semibold mb-2">토큰 생성 방법:</h4>
+          <ol className="list-decimal list-inside space-y-1 text-sm">
+            <li>
+              GitHub → Settings → Developer settings → Personal access tokens →
+              Tokens (classic)
+            </li>
+            <li>"Generate new token (classic)" 클릭</li>
+            <li>
+              필요한 권한: <code className="badge badge-sm">repo</code>, <code className="badge badge-sm">read:org</code>,{" "}
+              <code className="badge badge-sm">read:user</code>
+            </li>
+            <li>생성된 토큰을 복사하여 아래에 입력</li>
+          </ol>
+        </div>
+      </div>
+
+      <div className="form-control w-full">
+        <label className="label" htmlFor="token">
+          <span className="label-text font-semibold">Personal Access Token</span>
+        </label>
+        <div className="flex gap-2">
           <input
             id="token"
             type={showToken ? "text" : "password"}
+            className="input input-bordered flex-1"
             value={token}
             onChange={(e) => {
               setToken(e.target.value);
               setValidationResult(null);
             }}
             placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-            style={{ flex: 1 }}
           />
           <button
             type="button"
-            className="button-secondary"
+            className="btn btn-ghost"
             onClick={() => setShowToken(!showToken)}
-            style={{ padding: "8px 12px", minWidth: "60px" }}
           >
             {showToken ? "숨김" : "표시"}
           </button>
@@ -161,26 +156,15 @@ const TokenSettings = () => {
       </div>
 
       {validationResult && (
-        <div
-          style={{
-            padding: "12px",
-            borderRadius: "4px",
-            marginBottom: "16px",
-            backgroundColor: validationResult.isValid ? "#f0fdf4" : "#fef2f2",
-            border: `1px solid ${
-              validationResult.isValid ? "#16a34a" : "#dc2626"
-            }`,
-            color: validationResult.isValid ? "#15803d" : "#dc2626",
-          }}
-        >
-          {validationResult.message}
+        <div className={`alert ${validationResult.isValid ? "alert-success" : "alert-error"}`}>
+          <span>{validationResult.message}</span>
         </div>
       )}
 
-      <div className="button-group">
+      <div className="flex gap-2">
         <button
           type="button"
-          className="button-primary"
+          className="btn btn-primary"
           onClick={handleSave}
           disabled={isLoading}
         >
@@ -188,22 +172,22 @@ const TokenSettings = () => {
         </button>
         <button
           type="button"
-          className="button-secondary"
+          className="btn btn-ghost"
           onClick={validateToken}
           disabled={isValidating || !token.trim()}
         >
           {isValidating ? "검증 중..." : "토큰 검증"}
         </button>
         {token && (
-          <button type="button" className="button-danger" onClick={handleClear}>
+          <button type="button" className="btn btn-error" onClick={handleClear}>
             토큰 삭제
           </button>
         )}
       </div>
 
-      <div style={{ marginTop: "24px", fontSize: "14px", color: "#6b7280" }}>
-        <h4>보안 안내:</h4>
-        <ul style={{ paddingLeft: "20px" }}>
+      <div className="bg-base-200 rounded-lg p-4 text-sm">
+        <h4 className="font-semibold mb-2">보안 안내:</h4>
+        <ul className="list-disc list-inside space-y-1 text-base-content/70">
           <li>토큰은 로컬 SQLite 데이터베이스에 저장됩니다.</li>
           <li>토큰은 GitHub API 호출시에만 사용됩니다.</li>
           <li>외부로 전송되지 않으며, 애플리케이션 내에서만 사용됩니다.</li>

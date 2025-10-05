@@ -65,16 +65,21 @@ const RepositorySettings = () => {
   };
 
   return (
-    <div>
-      <h3>Repository 관리</h3>
-      <p>GitHub PR을 조회할 저장소를 등록하고 관리합니다.</p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-bold mb-2">Repository 관리</h3>
+        <p className="text-base-content/70">GitHub PR을 조회할 저장소를 등록하고 관리합니다.</p>
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="owner">Owner</label>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="form-control w-full">
+          <label className="label" htmlFor="owner">
+            <span className="label-text font-semibold">Owner</span>
+          </label>
           <input
             id="owner"
             type="text"
+            className="input input-bordered w-full"
             value={formData.owner}
             onChange={(e) => {
               setFormData(prev => ({ ...prev, owner: e.target.value }));
@@ -85,11 +90,14 @@ const RepositorySettings = () => {
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="name">Repository Name</label>
+        <div className="form-control w-full">
+          <label className="label" htmlFor="name">
+            <span className="label-text font-semibold">Repository Name</span>
+          </label>
           <input
             id="name"
             type="text"
+            className="input input-bordered w-full"
             value={formData.name}
             onChange={(e) => {
               setFormData(prev => ({ ...prev, name: e.target.value }));
@@ -100,11 +108,14 @@ const RepositorySettings = () => {
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="url">Repository URL</label>
+        <div className="form-control w-full">
+          <label className="label" htmlFor="url">
+            <span className="label-text font-semibold">Repository URL</span>
+          </label>
           <input
             id="url"
             type="url"
+            className="input input-bordered w-full"
             value={formData.url}
             onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
             placeholder="https://github.com/owner/repository"
@@ -112,17 +123,17 @@ const RepositorySettings = () => {
           />
         </div>
 
-        <div className="button-group">
+        <div className="flex gap-2">
           <button
             type="submit"
-            className="button-primary"
+            className="btn btn-primary"
             disabled={isLoading}
           >
             {isLoading ? "추가 중..." : "저장소 추가"}
           </button>
           <button
             type="button"
-            className="button-secondary"
+            className="btn btn-ghost"
             onClick={() => setFormData({ name: "", owner: "", url: "" })}
           >
             초기화
@@ -130,37 +141,37 @@ const RepositorySettings = () => {
         </div>
       </form>
 
-      <div style={{ marginTop: "32px" }}>
-        <h4>등록된 저장소</h4>
+      <div className="mt-8">
+        <h4 className="text-lg font-semibold mb-4">등록된 저장소</h4>
         {repositories.length === 0 ? (
-          <p style={{ color: "#6b7280", fontStyle: "italic" }}>
+          <p className="text-base-content/60 italic">
             등록된 저장소가 없습니다.
           </p>
         ) : (
-          <div className="item-list">
-            <div className="item-header">
+          <div className="bg-base-200 rounded-lg overflow-hidden">
+            <div className="bg-base-300 p-3 font-semibold">
               저장소 목록 ({repositories.length}개)
             </div>
-            {repositories.map((repo) => (
-              <div key={repo.id} className="item-row">
-                <div className="item-info">
-                  <div className="item-title">
-                    {repo.owner}/{repo.name}
+            <div className="divide-y divide-base-300">
+              {repositories.map((repo) => (
+                <div key={repo.id} className="p-4 flex items-center justify-between hover:bg-base-300/50 transition-colors">
+                  <div className="flex-1">
+                    <div className="font-semibold text-lg">
+                      {repo.owner}/{repo.name}
+                    </div>
+                    <div className="text-sm text-base-content/70">
+                      {repo.url}
+                    </div>
                   </div>
-                  <div className="item-subtitle">
-                    {repo.url}
-                  </div>
-                </div>
-                <div className="item-actions">
                   <button
-                    className="button-danger"
+                    className="btn btn-error btn-sm"
                     onClick={() => handleDelete(repo.id!)}
                   >
                     삭제
                   </button>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
